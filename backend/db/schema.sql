@@ -1,0 +1,192 @@
+CREATE DATABASE binayak_flights;
+
+\c binayak_flights;
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    wallet_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE flights (
+    id SERIAL PRIMARY KEY,
+    flight_number VARCHAR(20) UNIQUE NOT NULL,
+    airline VARCHAR(100) NOT NULL,
+    origin VARCHAR(100) NOT NULL,
+    destination VARCHAR(100) NOT NULL,
+    departure_time TIMESTAMP NOT NULL,
+    arrival_time TIMESTAMP NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    original_price NUMERIC(10, 2),
+    total_seats INTEGER NOT NULL DEFAULT 180,
+    available_seats INTEGER NOT NULL DEFAULT 180,
+    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'delayed', 'cancelled', 'completed')),
+    image_url TEXT,
+    tagline VARCHAR(255),
+    discount INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE bookings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    flight_id INTEGER REFERENCES flights(id) ON DELETE CASCADE,
+    passengers INTEGER NOT NULL DEFAULT 1,
+    total_price NUMERIC(10, 2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'cancelled', 'completed')),
+    booking_date TIMESTAMP DEFAULT NOW(),
+    passenger_name VARCHAR(100) NOT NULL,
+    passenger_email VARCHAR(150) NOT NULL,
+    passenger_phone VARCHAR(20),
+    seat_class VARCHAR(30) DEFAULT 'Economy' CHECK (seat_class IN ('Economy', 'Premium economy', 'Business', 'First')),
+    passenger_details JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    flight_id INTEGER NOT NULL REFERENCES flights(id) ON DELETE CASCADE,
+    seat_number VARCHAR(5) NOT NULL,
+    class VARCHAR(20) NOT NULL CHECK (class IN ('economy', 'business')),
+    status VARCHAR(20) NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'booked')),
+    reserved_until TIMESTAMPTZ,
+    reserved_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (flight_id, seat_number)
+);
+
+CREATE TABLE tickets (
+    id SERIAL PRIMARY KEY,
+    booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    seat_id INTEGER NOT NULL REFERENCES seats(id) ON DELETE CASCADE,
+    passenger_name VARCHAR(100) NOT NULL,
+    gender VARCHAR(10) NOT NULL CHECK (gender IN ('male', 'female')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE seat_swap_requests (
+    id SERIAL PRIMARY KEY,
+    flight_id INTEGER NOT NULL REFERENCES flights(id) ON DELETE CASCADE,
+    requester_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    requester_seat INTEGER NOT NULL REFERENCES seats(id) ON DELETE CASCADE,
+    target_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_seat INTEGER NOT NULL REFERENCES seats(id) ON DELETE CASCADE,
+    requester_gender VARCHAR(10) NOT NULL CHECK (requester_gender IN ('male', 'female')),
+    target_gender VARCHAR(10) NOT NULL CHECK (target_gender IN ('male', 'female')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX seat_swap_requests_pending_requester_seat ON seat_swap_requests (requester_seat) WHERE status = 'pending';
+CREATE UNIQUE INDEX seat_swap_requests_pending_target_seat ON seat_swap_requests (target_seat) WHERE status = 'pending';
+
+CREATE INDEX idx_flights_origin ON flights(origin);
+CREATE INDEX idx_flights_destination ON flights(destination);
+CREATE INDEX idx_flights_departure ON flights(departure_time);
+CREATE INDEX idx_bookings_user ON bookings(user_id);
+CREATE INDEX idx_bookings_flight ON bookings(flight_id);
+CREATE INDEX idx_seats_flight_id ON seats(flight_id);
+CREATE INDEX idx_seats_seat_number ON seats(seat_number);
+CREATE INDEX idx_seats_reserved_until ON seats(reserved_until);
+
+CREATE TABLE wallet_transactions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount NUMERIC(12,2) NOT NULL,
+    balance_after NUMERIC(12,2) NOT NULL,
+    type VARCHAR(40) NOT NULL,
+    reference_id INTEGER,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_wallet_tx_user_created ON wallet_transactions(user_id, created_at DESC);
+
+
+-- Seed: ~10 flights per KTM destination; fares vary by date (see generate_flights_seed.js)
+INSERT INTO flights (flight_number, airline, origin, destination, departure_time, arrival_time, price, original_price, total_seats, available_seats, image_url, tagline, discount) VALUES
+('BAPK01', 'Yeti Airlines', 'Kathmandu', 'Pokhara', '2026-04-02 08:07:00', '2026-04-02 08:37:00', 6100, 8775, 72, 36, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Yeti Airlines', 30),
+('BAPK02', 'Summit Air', 'Kathmandu', 'Pokhara', '2026-04-03 10:14:00', '2026-04-03 10:44:00', 4575, 6725, 72, 43, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Summit Air', 32),
+('BAPK03', 'Binayak Air', 'Kathmandu', 'Pokhara', '2026-04-04 12:21:00', '2026-04-04 12:51:00', 6225, 9275, 72, 49, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Binayak Air', 33),
+('BAPK04', 'Yeti Airlines', 'Kathmandu', 'Pokhara', '2026-04-05 14:28:00', '2026-04-05 14:58:00', 5225, 7325, 72, 56, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Yeti Airlines', 29),
+('BAPK05', 'Summit Air', 'Kathmandu', 'Pokhara', '2026-04-06 16:35:00', '2026-04-06 17:05:00', 4650, 6425, 72, 30, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Summit Air', 28),
+('BAPK06', 'Binayak Air', 'Kathmandu', 'Pokhara', '2026-04-07 06:42:00', '2026-04-07 07:12:00', 4925, 7425, 72, 36, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Binayak Air', 34),
+('BAPK07', 'Yeti Airlines', 'Kathmandu', 'Pokhara', '2026-04-08 08:49:00', '2026-04-08 09:19:00', 7650, 10550, 72, 43, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Yeti Airlines', 27),
+('BAPK08', 'Summit Air', 'Kathmandu', 'Pokhara', '2026-04-09 10:56:00', '2026-04-09 11:26:00', 5950, 9100, 72, 49, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Summit Air', 35),
+('BAPK09', 'Binayak Air', 'Kathmandu', 'Pokhara', '2026-04-10 12:03:00', '2026-04-10 12:33:00', 5175, 7250, 72, 56, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Binayak Air', 29),
+('BAPK10', 'Yeti Airlines', 'Kathmandu', 'Pokhara', '2026-04-11 14:10:00', '2026-04-11 14:40:00', 6025, 9225, 72, 30, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Phewa Lake & Annapurna · Yeti Airlines', 35),
+('BALK01', 'Yeti Airlines', 'Kathmandu', 'Lukla', '2026-04-02 08:07:00', '2026-04-02 08:42:00', 20650, 28900, 18, 9, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Yeti Airlines', 29),
+('BALK02', 'Summit Air', 'Kathmandu', 'Lukla', '2026-04-03 10:14:00', '2026-04-03 10:49:00', 14325, 20475, 18, 10, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Summit Air', 30),
+('BALK03', 'Binayak Air', 'Kathmandu', 'Lukla', '2026-04-04 12:21:00', '2026-04-04 12:56:00', 17100, 26175, 18, 12, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Binayak Air', 35),
+('BALK04', 'Yeti Airlines', 'Kathmandu', 'Lukla', '2026-04-05 14:28:00', '2026-04-05 15:03:00', 19400, 29875, 18, 14, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Yeti Airlines', 35),
+('BALK05', 'Summit Air', 'Kathmandu', 'Lukla', '2026-04-06 16:35:00', '2026-04-06 17:10:00', 16050, 22800, 18, 7, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Summit Air', 30),
+('BALK06', 'Binayak Air', 'Kathmandu', 'Lukla', '2026-04-07 06:42:00', '2026-04-07 07:17:00', 15900, 24650, 18, 9, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Binayak Air', 35),
+('BALK07', 'Yeti Airlines', 'Kathmandu', 'Lukla', '2026-04-08 08:49:00', '2026-04-08 09:24:00', 18675, 26525, 18, 10, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Yeti Airlines', 30),
+('BALK08', 'Summit Air', 'Kathmandu', 'Lukla', '2026-04-09 10:56:00', '2026-04-09 11:31:00', 15025, 20875, 18, 12, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Summit Air', 28),
+('BALK09', 'Binayak Air', 'Kathmandu', 'Lukla', '2026-04-10 12:03:00', '2026-04-10 12:38:00', 15650, 24100, 18, 14, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Binayak Air', 35),
+('BALK10', 'Yeti Airlines', 'Kathmandu', 'Lukla', '2026-04-11 14:10:00', '2026-04-11 14:45:00', 16875, 23450, 18, 7, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Everest trailhead · Yeti Airlines', 28),
+('BABP01', 'Yeti Airlines', 'Kathmandu', 'Bharatpur', '2026-04-02 08:07:00', '2026-04-02 08:32:00', 4950, 7275, 72, 36, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Yeti Airlines', 32),
+('BABP02', 'Summit Air', 'Kathmandu', 'Bharatpur', '2026-04-03 10:14:00', '2026-04-03 10:39:00', 6200, 9300, 72, 43, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Summit Air', 33),
+('BABP03', 'Binayak Air', 'Kathmandu', 'Bharatpur', '2026-04-04 12:21:00', '2026-04-04 12:46:00', 6650, 9700, 72, 49, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Binayak Air', 31),
+('BABP04', 'Yeti Airlines', 'Kathmandu', 'Bharatpur', '2026-04-05 14:28:00', '2026-04-05 14:53:00', 5825, 8325, 72, 56, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Yeti Airlines', 30),
+('BABP05', 'Summit Air', 'Kathmandu', 'Bharatpur', '2026-04-06 16:35:00', '2026-04-06 17:00:00', 6050, 9250, 72, 30, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Summit Air', 35),
+('BABP06', 'Binayak Air', 'Kathmandu', 'Bharatpur', '2026-04-07 06:42:00', '2026-04-07 07:07:00', 6200, 9175, 72, 36, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Binayak Air', 32),
+('BABP07', 'Yeti Airlines', 'Kathmandu', 'Bharatpur', '2026-04-08 08:49:00', '2026-04-08 09:14:00', 5925, 9075, 72, 43, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Yeti Airlines', 35),
+('BABP08', 'Summit Air', 'Kathmandu', 'Bharatpur', '2026-04-09 10:56:00', '2026-04-09 11:21:00', 5900, 8850, 72, 49, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Summit Air', 33),
+('BABP09', 'Binayak Air', 'Kathmandu', 'Bharatpur', '2026-04-10 12:03:00', '2026-04-10 12:28:00', 4400, 6300, 72, 56, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Binayak Air', 30),
+('BABP10', 'Yeti Airlines', 'Kathmandu', 'Bharatpur', '2026-04-11 14:10:00', '2026-04-11 14:35:00', 4550, 6825, 72, 30, 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=280&fit=crop', 'Chitwan & safari · Yeti Airlines', 33),
+('BABH01', 'Yeti Airlines', 'Kathmandu', 'Bhadrapur', '2026-04-02 08:07:00', '2026-04-02 08:57:00', 6775, 9825, 72, 36, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Yeti Airlines', 31),
+('BABH02', 'Summit Air', 'Kathmandu', 'Bhadrapur', '2026-04-03 10:14:00', '2026-04-03 11:04:00', 8175, 12100, 72, 43, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Summit Air', 32),
+('BABH03', 'Binayak Air', 'Kathmandu', 'Bhadrapur', '2026-04-04 12:21:00', '2026-04-04 13:11:00', 8000, 11850, 72, 49, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Binayak Air', 32),
+('BABH04', 'Yeti Airlines', 'Kathmandu', 'Bhadrapur', '2026-04-05 14:28:00', '2026-04-05 15:18:00', 9975, 14075, 72, 56, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Yeti Airlines', 29),
+('BABH05', 'Summit Air', 'Kathmandu', 'Bhadrapur', '2026-04-06 16:35:00', '2026-04-06 17:25:00', 5525, 8575, 72, 30, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Summit Air', 36),
+('BABH06', 'Binayak Air', 'Kathmandu', 'Bhadrapur', '2026-04-07 06:42:00', '2026-04-07 07:32:00', 5575, 8375, 72, 36, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Binayak Air', 33),
+('BABH07', 'Yeti Airlines', 'Kathmandu', 'Bhadrapur', '2026-04-08 08:49:00', '2026-04-08 09:39:00', 6450, 10000, 72, 43, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Yeti Airlines', 36),
+('BABH08', 'Summit Air', 'Kathmandu', 'Bhadrapur', '2026-04-09 10:56:00', '2026-04-09 11:46:00', 8225, 12500, 72, 49, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Summit Air', 34),
+('BABH09', 'Binayak Air', 'Kathmandu', 'Bhadrapur', '2026-04-10 12:03:00', '2026-04-10 12:53:00', 9275, 13075, 72, 56, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Binayak Air', 29),
+('BABH10', 'Yeti Airlines', 'Kathmandu', 'Bhadrapur', '2026-04-11 14:10:00', '2026-04-11 15:00:00', 7425, 11275, 72, 30, 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', 'Eastern hills · Yeti Airlines', 34),
+('BANG01', 'Yeti Airlines', 'Kathmandu', 'Nepalgunj', '2026-04-02 08:07:00', '2026-04-02 09:17:00', 7900, 11850, 72, 36, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Yeti Airlines', 33),
+('BANG02', 'Summit Air', 'Kathmandu', 'Nepalgunj', '2026-04-03 10:14:00', '2026-04-03 11:24:00', 10400, 15900, 72, 43, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Summit Air', 35),
+('BANG03', 'Binayak Air', 'Kathmandu', 'Nepalgunj', '2026-04-04 12:21:00', '2026-04-04 13:31:00', 9350, 13375, 72, 49, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Binayak Air', 30),
+('BANG04', 'Yeti Airlines', 'Kathmandu', 'Nepalgunj', '2026-04-05 14:28:00', '2026-04-05 15:38:00', 10550, 15400, 72, 56, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Yeti Airlines', 31),
+('BANG05', 'Summit Air', 'Kathmandu', 'Nepalgunj', '2026-04-06 16:35:00', '2026-04-06 17:45:00', 7400, 11100, 72, 30, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Summit Air', 33),
+('BANG06', 'Binayak Air', 'Kathmandu', 'Nepalgunj', '2026-04-07 06:42:00', '2026-04-07 07:52:00', 8600, 12475, 72, 36, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Binayak Air', 31),
+('BANG07', 'Yeti Airlines', 'Kathmandu', 'Nepalgunj', '2026-04-08 08:49:00', '2026-04-08 09:59:00', 8975, 13475, 72, 43, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Yeti Airlines', 33),
+('BANG08', 'Summit Air', 'Kathmandu', 'Nepalgunj', '2026-04-09 10:56:00', '2026-04-09 12:06:00', 7250, 10650, 72, 49, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Summit Air', 32),
+('BANG09', 'Binayak Air', 'Kathmandu', 'Nepalgunj', '2026-04-10 12:03:00', '2026-04-10 13:13:00', 8750, 12775, 72, 56, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Binayak Air', 32),
+('BANG10', 'Yeti Airlines', 'Kathmandu', 'Nepalgunj', '2026-04-11 14:10:00', '2026-04-11 15:20:00', 10475, 15400, 72, 30, 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=280&fit=crop', 'Western Nepal gateway · Yeti Airlines', 32),
+('BASI01', 'Yeti Airlines', 'Kathmandu', 'Simara', '2026-04-02 08:07:00', '2026-04-02 08:27:00', 5425, 8200, 72, 36, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Yeti Airlines', 34),
+('BASI02', 'Summit Air', 'Kathmandu', 'Simara', '2026-04-03 10:14:00', '2026-04-03 10:34:00', 3050, 4700, 72, 43, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Summit Air', 35),
+('BASI03', 'Binayak Air', 'Kathmandu', 'Simara', '2026-04-04 12:21:00', '2026-04-04 12:41:00', 3925, 5575, 72, 49, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Binayak Air', 30),
+('BASI04', 'Yeti Airlines', 'Kathmandu', 'Simara', '2026-04-05 14:28:00', '2026-04-05 14:48:00', 3400, 5000, 72, 56, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Yeti Airlines', 32),
+('BASI05', 'Summit Air', 'Kathmandu', 'Simara', '2026-04-06 16:35:00', '2026-04-06 16:55:00', 3175, 4725, 72, 30, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Summit Air', 33),
+('BASI06', 'Binayak Air', 'Kathmandu', 'Simara', '2026-04-07 06:42:00', '2026-04-07 07:02:00', 4025, 5800, 72, 36, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Binayak Air', 31),
+('BASI07', 'Yeti Airlines', 'Kathmandu', 'Simara', '2026-04-08 08:49:00', '2026-04-08 09:09:00', 4525, 6750, 72, 43, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Yeti Airlines', 33),
+('BASI08', 'Summit Air', 'Kathmandu', 'Simara', '2026-04-09 10:56:00', '2026-04-09 11:16:00', 3725, 5450, 72, 49, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Summit Air', 32),
+('BASI09', 'Binayak Air', 'Kathmandu', 'Simara', '2026-04-10 12:03:00', '2026-04-10 12:23:00', 4400, 6475, 72, 56, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Binayak Air', 32),
+('BASI10', 'Yeti Airlines', 'Kathmandu', 'Simara', '2026-04-11 14:10:00', '2026-04-11 14:30:00', 4425, 6450, 72, 30, 'https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=400&h=280&fit=crop', 'Terai corridor · Yeti Airlines', 31),
+('PKTK01', 'Summit Air', 'Pokhara', 'Kathmandu', '2026-04-16 09:11:00', '2026-04-16 09:41:00', 6875, 10525, 72, 34, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Summit Air', 35),
+('PKTK02', 'Binayak Air', 'Pokhara', 'Kathmandu', '2026-04-17 11:22:00', '2026-04-17 11:52:00', 6025, 8675, 72, 41, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Binayak Air', 31),
+('PKTK03', 'Yeti Airlines', 'Pokhara', 'Kathmandu', '2026-04-18 13:33:00', '2026-04-18 14:03:00', 6050, 8825, 72, 48, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Yeti Airlines', 31),
+('PKTK04', 'Summit Air', 'Pokhara', 'Kathmandu', '2026-04-19 15:44:00', '2026-04-19 16:14:00', 7350, 10300, 72, 56, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Summit Air', 29),
+('PKTK05', 'Binayak Air', 'Pokhara', 'Kathmandu', '2026-04-20 17:55:00', '2026-04-20 18:25:00', 4850, 7025, 72, 27, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Binayak Air', 31),
+('PKTK06', 'Yeti Airlines', 'Pokhara', 'Kathmandu', '2026-04-21 08:06:00', '2026-04-21 08:36:00', 6775, 9825, 72, 34, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Yeti Airlines', 31),
+('PKTK07', 'Summit Air', 'Pokhara', 'Kathmandu', '2026-04-22 10:17:00', '2026-04-22 10:47:00', 6125, 8325, 72, 41, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Summit Air', 26),
+('PKTK08', 'Binayak Air', 'Pokhara', 'Kathmandu', '2026-04-23 12:28:00', '2026-04-23 12:58:00', 4325, 5975, 72, 48, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Binayak Air', 28),
+('PKTK09', 'Yeti Airlines', 'Pokhara', 'Kathmandu', '2026-04-24 14:39:00', '2026-04-24 15:09:00', 5875, 8700, 72, 56, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Yeti Airlines', 32),
+('PKTK10', 'Summit Air', 'Pokhara', 'Kathmandu', '2026-04-25 16:50:00', '2026-04-25 17:20:00', 4475, 6175, 72, 27, 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=280&fit=crop', 'Return to Kathmandu · Summit Air', 28),
+('LKTK01', 'Summit Air', 'Lukla', 'Kathmandu', '2026-04-16 09:11:00', '2026-04-16 09:46:00', 13175, 19625, 18, 8, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Summit Air', 33),
+('LKTK02', 'Binayak Air', 'Lukla', 'Kathmandu', '2026-04-17 11:22:00', '2026-04-17 11:57:00', 15625, 23750, 18, 10, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Binayak Air', 34),
+('LKTK03', 'Yeti Airlines', 'Lukla', 'Kathmandu', '2026-04-18 13:33:00', '2026-04-18 14:08:00', 19850, 28175, 18, 12, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Yeti Airlines', 30),
+('LKTK04', 'Summit Air', 'Lukla', 'Kathmandu', '2026-04-19 15:44:00', '2026-04-19 16:19:00', 16975, 24450, 18, 14, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Summit Air', 31),
+('LKTK05', 'Binayak Air', 'Lukla', 'Kathmandu', '2026-04-20 17:55:00', '2026-04-20 18:30:00', 16250, 22925, 18, 6, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Binayak Air', 29),
+('LKTK06', 'Yeti Airlines', 'Lukla', 'Kathmandu', '2026-04-21 08:06:00', '2026-04-21 08:41:00', 20300, 28625, 18, 8, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Yeti Airlines', 29),
+('LKTK07', 'Summit Air', 'Lukla', 'Kathmandu', '2026-04-22 10:17:00', '2026-04-22 10:52:00', 13500, 20525, 18, 10, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Summit Air', 34),
+('LKTK08', 'Binayak Air', 'Lukla', 'Kathmandu', '2026-04-23 12:28:00', '2026-04-23 13:03:00', 16675, 25675, 18, 12, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Binayak Air', 35),
+('LKTK09', 'Yeti Airlines', 'Lukla', 'Kathmandu', '2026-04-24 14:39:00', '2026-04-24 15:14:00', 21950, 33375, 18, 14, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Yeti Airlines', 34),
+('LKTK10', 'Summit Air', 'Lukla', 'Kathmandu', '2026-04-25 16:50:00', '2026-04-25 17:25:00', 15875, 24450, 18, 6, 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=280&fit=crop', 'Return from Everest · Summit Air', 35);
