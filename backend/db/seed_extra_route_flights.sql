@@ -1,0 +1,3 @@
+-- Deprecated: extra flights are now in the main seed.
+-- See: schema.sql (INSERT block) and flights_seed_values.txt (used by init.js).
+-- To refresh data: drop DB and re-run init, or TRUNCATE flights and run init seed only.
