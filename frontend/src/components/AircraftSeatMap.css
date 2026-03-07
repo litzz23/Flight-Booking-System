@@ -1,0 +1,189 @@
+.ac-wrap {
+  margin-top: 14px;
+}
+
+.ac-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.ac-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.ac-dot-available { background: #34a853; }
+.ac-dot-booked { background: #ea4335; }
+.ac-dot-male { background: #1a56c4; }
+.ac-dot-female { background: #c2187a; }
+.ac-dot-selected { background: #fbbc04; }
+.ac-dot-mine { background: #8ab4f8; }
+.ac-dot-swap-requester { background: #fbbc04; }
+.ac-dot-swap-target { background: #34a853; }
+
+.ac-cabin-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 140px 140px 18px 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+}
+
+.ac-cockpit-label {
+  width: fit-content;
+  margin: 0 auto 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #b9c2d9;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ac-columns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #b5bed4;
+}
+
+.ac-col-group {
+  display: flex;
+  gap: 12px;
+  min-width: 88px;
+  justify-content: center;
+}
+
+.ac-aisle-label {
+  opacity: 0.75;
+  letter-spacing: 0.03em;
+}
+
+.ac-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.ac-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ac-row-number {
+  width: 24px;
+  text-align: right;
+  font-size: 12px;
+  color: #9ca8c6;
+}
+
+.ac-side {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.ac-aisle {
+  width: clamp(34px, 7vw, 54px);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 99px;
+}
+
+.ac-seat {
+  min-width: 48px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 11px;
+  font-weight: 600;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+}
+
+.ac-seat:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  filter: brightness(1.03);
+}
+
+.ac-seat-preview {
+}
+
+.ac-seat-highlight-requester {
+  box-shadow: 0 0 0 3px #fbbc04, 0 4px 14px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 2;
+}
+
+.ac-seat-highlight-target {
+  box-shadow: 0 0 0 3px #34a853, 0 4px 14px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 2;
+}
+
+.ac-seat-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  gap: 1px;
+}
+
+.ac-seat-num { font-size: inherit; font-weight: 600; }
+
+.ac-seat-gender {
+  font-size: 9px;
+  font-weight: 800;
+  opacity: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.ac-seat-available { background: #34a853; color: #fff; }
+.ac-seat-booked { background: #ea4335; color: #fff;  }
+.ac-seat-booked-male { background: #1a56c4; color: #fff;  }
+.ac-seat-booked-female { background: #b8076a; color: #fff;  }
+.ac-seat-reserved { background: #d98400; color: #fff;  }
+.ac-seat-selected { background: #fbbc04; color: #1e1e1e; }
+.ac-seat-mine {
+  background: rgba(138, 180, 248, 0.35);
+  color: #e8ecff;
+  border-color: rgba(138, 180, 248, 0.45);
+}
+
+.ac-seat-mine-male {
+  background: linear-gradient(145deg, rgba(26, 86, 196, 0.5), rgba(138, 180, 248, 0.32));
+  border-color: rgba(90, 140, 230, 0.65);
+}
+
+.ac-seat-mine-female {
+  background: linear-gradient(145deg, rgba(184, 7, 106, 0.45), rgba(138, 180, 248, 0.28));
+  border-color: rgba(210, 90, 150, 0.55);
+}
+.ac-seat-empty { background: transparent; border-color: transparent;  }
+
+@media (max-width: 640px) {
+  .ac-cabin-shell { border-radius: 80px 80px 14px 14px; }
+  .ac-columns { gap: 22px; }
+  .ac-side { gap: 6px; }
+  .ac-seat {
+    min-width: 38px;
+    min-height: 30px;
+    font-size: 10px;
+    padding: 3px 4px;
+  }
+}
