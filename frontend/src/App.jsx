@@ -7,6 +7,7 @@ import BookFlightPage from './components/BookFlightPage'
 import AuthPage from './components/AuthPage'
 import MyBookings from './components/MyBookings'
 import WalletPage from './components/WalletPage'
+import PaymentCallbackPage from './components/PaymentCallbackPage'
 import './App.css'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/bookings" element={<MyBookings />} />
           <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/payment/callback" element={<PaymentCallbackPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

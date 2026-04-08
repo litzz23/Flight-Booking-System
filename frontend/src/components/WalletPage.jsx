@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { wallet as walletAPI } from '../api'
+import { wallet as walletAPI, payments as paymentAPI } from '../api'
 import FlightsHeader from './flights/FlightsHeader'
 import cloudsBg from '../assets/clouds-bg.png'
 import './FlightDeals.css'
@@ -56,7 +56,8 @@ function formatTxDate(iso) {
 
 function WalletPage() {
   const navigate = useNavigate()
-  const { user, refreshUser } = useAuth()
+  const location = useLocation()
+  const { user, loading: authLoading, refreshUser } = useAuth()
   const [balance, setBalance] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -82,12 +83,20 @@ function WalletPage() {
   }, [refreshUser])
 
   useEffect(() => {
+    if (authLoading) return
     if (!user) {
       navigate('/auth', { state: { from: '/wallet' } })
       return
     }
     load()
-  }, [user, navigate, load])
+  }, [authLoading, user, navigate, load])
+
+  useEffect(() => {
+    const from = location.state?.from
+    if (typeof from === 'string' && from.startsWith('/')) {
+      localStorage.setItem('walletReturnTo', from)
+    }
+  }, [location.state])
 
   const openModal = () => {
     setModalOpen(true)
@@ -108,20 +117,33 @@ function WalletPage() {
       setModalError('Enter a valid amount.')
       return
     }
+    if (amount < 10) {
+      setModalError('Minimum top-up is NPR 10.')
+      return
+    }
     setSubmitting(true)
     setModalError('')
     try {
-      await walletAPI.addFunds(amount)
-      setModalOpen(false)
-      setLoading(true)
-      await load()
+      const redirectAfterSuccess =
+        (typeof location.state?.from === 'string' && location.state.from.startsWith('/') && location.state.from) ||
+        localStorage.getItem('walletReturnTo') ||
+        '/wallet'
+      const data = await paymentAPI.khaltiInitiate({
+        amount,
+        userId: user.id,
+        redirectAfterSuccess,
+      })
+      window.location.href = data.payment_url
     } catch (err) {
       setModalError(err.message)
+      setSubmitting(false)
+      return
     } finally {
       setSubmitting(false)
     }
   }
 
+  if (authLoading) return null
   if (!user) return null
 
   return (
@@ -202,7 +224,7 @@ function WalletPage() {
             <h2 id="w-modal-title" className="w-modal-title">
               Add to your wallet
             </h2>
-            <p className="w-modal-desc">Demo top-up — no real card charge. NPR only.</p>
+            <p className="w-modal-desc">Pay securely with Khalti ePay. NPR only.</p>
 
             <div className="w-presets">
               {PRESETS.map((n) => (
@@ -224,7 +246,7 @@ function WalletPage() {
               <input
                 id="w-amount"
                 type="number"
-                min="100"
+                min="10"
                 step="1"
                 className="w-input"
                 placeholder="e.g. 5000"

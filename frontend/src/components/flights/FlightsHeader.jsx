@@ -9,7 +9,7 @@ function formatWallet(n) {
 
 export default function FlightsHeader({ activeTab = 'flights' }) {
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
 
   return (
     <header className="fd-header">
@@ -21,7 +21,7 @@ export default function FlightsHeader({ activeTab = 'flights' }) {
         </nav>
       </div>
       <div className="fd-header-actions">
-        {user ? (
+        {loading ? null : user ? (
           <>
             <button type="button" className="fd-wallet-pill" onClick={() => navigate('/wallet')} title="Open wallet">
               <span className="fd-wallet-label">Wallet</span>

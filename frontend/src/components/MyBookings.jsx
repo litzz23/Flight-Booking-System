@@ -10,7 +10,7 @@ import './MyBookings.css'
 
 function MyBookings() {
   const navigate = useNavigate()
-  const { user, logout, refreshUser } = useAuth()
+  const { user, loading: authLoading, logout, refreshUser } = useAuth()
   const [bookings, setBookings] = useState([])
   const [incomingSwapRequests, setIncomingSwapRequests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -45,13 +45,14 @@ function MyBookings() {
   }, [user])
 
   useEffect(() => {
+    if (authLoading) return
     if (!user) {
       navigate('/auth')
       return
     }
     setLoading(true)
     refreshDashboard().finally(() => setLoading(false))
-  }, [user, navigate, refreshDashboard])
+  }, [authLoading, user, navigate, refreshDashboard])
 
   useEffect(() => {
     if (!user) return
@@ -374,6 +375,9 @@ function MyBookings() {
     swapDetailRequest && user && !swapDetailLoading
       ? getSwapPreviewBlockReason(swapDetailRequest, swapDetailSeats, user.id)
       : null
+
+  if (authLoading) return null
+  if (!user) return null
 
   return (
     <div className="mb-page" style={{ backgroundImage: `url(${cloudsBg})` }}>

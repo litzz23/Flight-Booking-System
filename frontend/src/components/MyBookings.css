@@ -19,7 +19,6 @@
   z-index: 0;
 }
 
-/* Do not force position/z-index on full-screen modals (they need position: fixed). */
 .mb-page > *:not(.mb-modal-overlay):not(.srm-overlay) {
   position: relative;
   z-index: 1;

@@ -1,10 +1,5 @@
-/* ============================================================
-   FLIGHT DEALS — landing & search UI
-   ============================================================ */
-
 @import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap");
 
-/* ---- Page ---- */
 .fd-page {
   width: 100%;
   min-height: 100vh;
@@ -36,9 +31,6 @@
   z-index: 1;
 }
 
-/* ============================================================
-   HEADER
-   ============================================================ */
 
 .fd-header {
   display: flex;
@@ -186,9 +178,6 @@
   font-weight: 600;
 }
 
-/* ============================================================
-   FILTER BAR (sticky under header)
-   ============================================================ */
 
 .fd-filter-bar {
   position: relative;
@@ -210,9 +199,6 @@
   justify-content: center;
 }
 
-/* ============================================================
-   FILTER CHIPS (shared)
-   ============================================================ */
 
 .fd-filter-chip {
   display: flex;
@@ -267,9 +253,6 @@
   z-index: 150;
 }
 
-/* ============================================================
-   DROPDOWNS
-   ============================================================ */
 
 .fd-dropdown {
   position: absolute;
@@ -341,9 +324,6 @@
   margin-top: 6px;
 }
 
-/* ============================================================
-   HERO + SEARCH
-   ============================================================ */
 
 .fd-hero {
   position: relative;
@@ -407,7 +387,6 @@
   margin-bottom: 16px;
 }
 
-/* Search row under hero title */
 .fd-search-wrap {
   width: 100%;
   max-width: 680px;
@@ -416,7 +395,6 @@
   box-sizing: border-box;
 }
 
-/* Booking page — same shell as deals */
 .fd-book-hero {
   padding-top: 36px;
   position: relative;
@@ -998,7 +976,6 @@
   }
 }
 
-/* Search bar */
 .fd-search-bar {
   display: flex;
   align-items: center;
@@ -1053,7 +1030,6 @@
   color: #e0e0ec;
 }
 
-/* Origin row */
 .fd-origin-row {
   display: flex;
   align-items: center;
@@ -1100,9 +1076,6 @@
   left: 50px;
 }
 
-/* ============================================================
-   CONTENT AREA
-   ============================================================ */
 
 .fd-content {
   max-width: 960px;
@@ -1112,7 +1085,6 @@
   z-index: 1;
 }
 
-/* Deals header + sort */
 .fd-deals-header {
   display: flex;
   align-items: center;
@@ -1161,9 +1133,6 @@
   left: auto;
 }
 
-/* ============================================================
-   LOADING / NO RESULTS
-   ============================================================ */
 
 .fd-loading {
   text-align: center;
@@ -1202,9 +1171,6 @@
   gap: 14px;
 }
 
-/* ============================================================
-   DEAL CARDS
-   ============================================================ */
 
 .fd-deals-grid {
   display: grid;
@@ -1349,9 +1315,6 @@
   text-decoration: line-through;
 }
 
-/* ============================================================
-   HOW IT WORKS
-   ============================================================ */
 
 .fd-section {
   margin-top: 56px;
@@ -1413,9 +1376,6 @@
   line-height: 1.6;
 }
 
-/* ============================================================
-   GETAWAY THEMES
-   ============================================================ */
 
 .fd-getaway-grid {
   display: grid;
@@ -1476,9 +1436,6 @@
   transform: translateX(3px);
 }
 
-/* ============================================================
-   FAQ ACCORDION
-   ============================================================ */
 
 .fd-faq-list {
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1543,9 +1500,6 @@
   }
 }
 
-/* ============================================================
-   FOOTER
-   ============================================================ */
 
 .fd-footer {
   margin-top: 56px;
@@ -1560,9 +1514,6 @@
   margin: 0 8px;
 }
 
-/* ============================================================
-   BOOKING MODAL
-   ============================================================ */
 
 .fd-modal-overlay {
   position: fixed;
@@ -1814,7 +1765,6 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Booking success */
 .fd-booking-success {
   text-align: center;
   padding: 16px 0;
@@ -1865,9 +1815,6 @@
   margin-top: 24px;
 }
 
-/* ============================================================
-   FLIGHT DEALS LANDING (image tiles → search page)
-   ============================================================ */
 
 .fd-page-deals-landing .fd-hero-deals {
   padding-bottom: 8px;
@@ -1990,7 +1937,6 @@
   text-align: left;
 }
 
-/* ---- Full flight search page (/flights/search) ---- */
 
 .fd-flight-search-page .fd-content {
   max-width: 900px;
@@ -2060,7 +2006,6 @@
   padding-top: 12px;
 }
 
-/* ---- Search: price graph + date strip + smart picks ---- */
 .gf-search-panel {
   margin: 20px 0;
   padding: 18px 18px 16px;
@@ -2524,9 +2469,6 @@
   font-weight: 500;
 }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
 
 @media (max-width: 900px) {
   .fd-header {

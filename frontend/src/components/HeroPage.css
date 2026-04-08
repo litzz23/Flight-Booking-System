@@ -1,7 +1,3 @@
-/* ============================================================
-   HERO PAGE — Jesko Jets inspired
-   ============================================================ */
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 * {
@@ -26,7 +22,6 @@
   position: relative;
 }
 
-/* Dark overlay so text stays readable over the photo */
 .hero-wrapper::before {
   content: '';
   position: absolute;
@@ -54,9 +49,6 @@
   z-index: 2;
 }
 
-/* ============================================================
-   NAVBAR
-   ============================================================ */
 
 .navbar {
   display: flex;
@@ -88,9 +80,6 @@
   opacity: 1;
 }
 
-/* ============================================================
-   HERO MAIN — three-column layout
-   ============================================================ */
 
 .hero-main {
   flex: 1;
@@ -102,7 +91,6 @@
   position: relative;
 }
 
-/* ---- LEFT ---- */
 .hero-left {
   display: flex;
   flex-direction: column;
@@ -142,12 +130,10 @@
   max-width: 260px;
 }
 
-/* ---- CENTER (spacer for grid) ---- */
 .hero-center {
   height: 100%;
 }
 
-/* Brand name — fixed in the middle of the window (viewport center) */
 .hero-brand-overlay {
   position: absolute;
   left: 50%;
@@ -163,7 +149,6 @@
   z-index: 3;
 }
 
-/* ---- BOTTOM CTA ---- */
 .hero-book-cta {
   display: flex;
   justify-content: center;
@@ -207,7 +192,6 @@
   flex-shrink: 0;
 }
 
-/* ---- RIGHT ---- */
 .hero-right {
   display: flex;
   flex-direction: column;
@@ -254,9 +238,6 @@
   text-transform: uppercase;
 }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
 
 @media (max-width: 900px) {
   .navbar {

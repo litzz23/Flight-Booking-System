@@ -62,3 +62,8 @@ export const wallet = {
   get: () => request('/wallet'),
   addFunds: (amount) => request('/wallet/add-funds', { method: 'POST', body: JSON.stringify({ amount }) }),
 }
+
+export const payments = {
+  khaltiInitiate: (body) => request('/payments/khalti/initiate', { method: 'POST', body: JSON.stringify(body) }),
+  khaltiCallbackLookup: (queryString) => request(`/payments/khalti/callback?${queryString}`),
+}

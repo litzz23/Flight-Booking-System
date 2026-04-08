@@ -627,7 +627,11 @@ function BookFlightPage() {
                     <button
                       type="button"
                       className="fd-wallet-topup"
-                      onClick={() => navigate("/wallet")}
+                      onClick={() =>
+                        navigate("/wallet", {
+                          state: { from: `${location.pathname}${location.search}` },
+                        })
+                      }
                     >
                       Add funds
                     </button>
@@ -642,7 +646,11 @@ function BookFlightPage() {
                       <button
                         type="button"
                         className="fd-wallet-link"
-                        onClick={() => navigate("/wallet")}
+                        onClick={() =>
+                          navigate("/wallet", {
+                            state: { from: `${location.pathname}${location.search}` },
+                          })
+                        }
                       >
                         Top up
                       </button>

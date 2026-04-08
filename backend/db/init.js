@@ -80,6 +80,23 @@ const initDB = async () => {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_wallet_tx_user_created ON wallet_transactions(user_id, created_at DESC)
     `)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS khalti_transactions (
+        id SERIAL PRIMARY KEY,
+        pidx VARCHAR(100) UNIQUE NOT NULL,
+        purchase_order_id VARCHAR(120) NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount_npr NUMERIC(12,2) NOT NULL,
+        amount_paisa INTEGER NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('initiated', 'completed', 'pending', 'failed', 'expired', 'cancelled')),
+        transaction_id VARCHAR(120),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `)
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_khalti_tx_user_created ON khalti_transactions(user_id, created_at DESC)
+    `)
 
     await pool.query(`
       ALTER TABLE bookings ADD COLUMN IF NOT EXISTS passenger_details JSONB
