@@ -25,7 +25,6 @@ export function minPriceByDate(flights, origin, destination) {
   return map;
 }
 
-/** Date key with lowest price in the set (for cheapest-day highlight) */
 export function findCheapestDateKey(priceByDate, dateKeys) {
   let bestK = null;
   let bestP = Infinity;
