@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import FlightsHeader from './flights/FlightsHeader'
+import { useAuth } from '../AuthContext'
 import { payments as paymentAPI, wallet as walletAPI } from '../api'
 import cloudsBg from '../assets/clouds-bg.png'
 import './FlightDeals.css'
 import './WalletPage.css'
 
 function PaymentCallbackPage() {
+  const { refreshUser } = useAuth()
   const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState({
@@ -61,6 +63,7 @@ function PaymentCallbackPage() {
         })
 
         if (data.status === 'completed') {
+          await refreshUser()
           const walletData = await walletAPI.get()
           if (!mounted) return
           setWalletActivity((walletData.transactions || []).slice(0, 5))
@@ -80,7 +83,7 @@ function PaymentCallbackPage() {
     return () => {
       mounted = false
     }
-  }, [queryString])
+  }, [queryString, refreshUser])
 
   const isSuccess = result.status === 'completed'
   const isPending = result.status === 'pending'
