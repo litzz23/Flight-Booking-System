@@ -1,7 +1,4 @@
-/**
- * Clears flights (and dependent bookings) and inserts the full seed from flights_seed_values.txt.
- * Run from backend: node db/reseed_flights.js
- */
+/** Replaces flight data with `flights_seed_values.txt` and reseeds seats. */
 const fs = require('fs')
 const path = require('path')
 const pool = require('./pool')

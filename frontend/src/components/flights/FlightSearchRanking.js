@@ -1,7 +1,4 @@
-/**
- * Heuristic "smart" ranking (local ranking only) — balances price, duration,
- * departure time, and discount to surface strong options first.
- */
+/** Local ranking heuristic for "top flights" ordering. */
 export function scoreFlight(f, ctx) {
   const {
     minPrice,

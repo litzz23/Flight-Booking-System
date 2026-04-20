@@ -1,131 +1,333 @@
-const router = require('express').Router()
-const pool = require('../db/pool')
-const { authenticate, authorizeAdmin } = require('../middleware/auth')
+const router = require("express").Router();
+const pool = require("../db/pool");
+const { authenticate, authorizeAdmin } = require("../middleware/auth");
+const { syncPastFlightsStatus } = require("../utils/flightStatus");
+const {
+  getSeatPriceFromBase,
+  normalizeSeatClass,
+} = require("../utils/seatPricing");
 
-// Get all flights (with optional search filters)
-router.get('/', async (req, res) => {
+async function ensureDestinationMediaColumns() {
+  await pool.query(
+    "ALTER TABLE destinations ADD COLUMN IF NOT EXISTS image_url TEXT",
+  );
+  await pool.query(
+    "ALTER TABLE destinations ADD COLUMN IF NOT EXISTS tagline VARCHAR(255)",
+  );
+}
+
+function normalizedCityExpr(valueSql) {
+  return `REGEXP_REPLACE(LOWER(TRIM(${valueSql})), '(.)\\1+', '\\1', 'g')`;
+}
+
+router.get("/", async (req, res) => {
   try {
-    const { origin, destination, date, status } = req.query
+    await syncPastFlightsStatus(pool);
+    await ensureDestinationMediaColumns();
+    const { origin, destination, date, status } = req.query;
 
-    let query = 'SELECT * FROM flights WHERE 1=1'
-    const params = []
+    let query = `
+      SELECT
+        f.*,
+        CASE
+          WHEN d.id IS NOT NULL THEN NULLIF(BTRIM(d.image_url), '')
+          ELSE f.image_url
+        END AS image_url,
+        CASE
+          WHEN d.id IS NOT NULL THEN NULLIF(BTRIM(d.tagline), '')
+          ELSE f.tagline
+        END AS tagline,
+        COALESCE(NULLIF(BTRIM(d.city), ''), f.destination) AS destination
+      FROM flights f
+      LEFT JOIN destinations d
+        ON ${normalizedCityExpr("d.city")} = ${normalizedCityExpr("f.destination")}
+      WHERE 1=1`;
+    const params = [];
 
     if (origin) {
-      params.push(origin)
-      query += ` AND LOWER(origin) = LOWER($${params.length})`
+      params.push(origin);
+      query += ` AND LOWER(TRIM(f.origin)) = LOWER(TRIM($${params.length}::text))`;
     }
 
     if (destination) {
-      params.push(destination)
-      query += ` AND LOWER(destination) = LOWER($${params.length})`
+      params.push(destination);
+      query += ` AND LOWER(TRIM(f.destination)) = LOWER(TRIM($${params.length}::text))`;
     }
 
     if (date) {
-      params.push(date)
-      query += ` AND DATE(departure_time) = $${params.length}`
+      params.push(date);
+      query += ` AND DATE(f.departure_time) = $${params.length}`;
     }
 
     if (status) {
-      params.push(status)
-      query += ` AND status = $${params.length}`
+      params.push(status);
+      query += ` AND f.status = $${params.length}`;
     }
 
-    query += ' ORDER BY departure_time ASC'
+    query += " ORDER BY f.departure_time ASC";
 
-    const result = await pool.query(query, params)
-    res.json(result.rows)
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// Filter metadata (origins, destinations, airlines) — must be before /:id
-router.get('/meta', async (req, res) => {
+router.get("/meta", async (req, res) => {
   try {
+    await syncPastFlightsStatus(pool);
     const [origins, destinations, airlines] = await Promise.all([
-      pool.query("SELECT DISTINCT origin FROM flights WHERE status = 'scheduled' ORDER BY origin"),
-      pool.query("SELECT DISTINCT destination FROM flights WHERE status = 'scheduled' ORDER BY destination"),
-      pool.query("SELECT DISTINCT airline FROM flights WHERE status = 'scheduled' ORDER BY airline"),
-    ])
+      pool.query(
+        `SELECT DISTINCT f.origin
+         FROM flights f
+         JOIN destinations d_origin
+           ON ${normalizedCityExpr("d_origin.city")} = ${normalizedCityExpr("f.origin")}
+         JOIN destinations d_destination
+           ON ${normalizedCityExpr("d_destination.city")} = ${normalizedCityExpr("f.destination")}
+         WHERE f.status = 'scheduled'
+         ORDER BY f.origin`,
+      ),
+      pool.query(
+        `SELECT DISTINCT f.destination
+         FROM flights f
+         JOIN destinations d_origin
+           ON ${normalizedCityExpr("d_origin.city")} = ${normalizedCityExpr("f.origin")}
+         JOIN destinations d_destination
+           ON ${normalizedCityExpr("d_destination.city")} = ${normalizedCityExpr("f.destination")}
+         WHERE f.status = 'scheduled'
+         ORDER BY f.destination`,
+      ),
+      pool.query(
+        `SELECT DISTINCT f.airline
+         FROM flights f
+         JOIN destinations d_origin
+           ON ${normalizedCityExpr("d_origin.city")} = ${normalizedCityExpr("f.origin")}
+         JOIN destinations d_destination
+           ON ${normalizedCityExpr("d_destination.city")} = ${normalizedCityExpr("f.destination")}
+         WHERE f.status = 'scheduled'
+         ORDER BY f.airline`,
+      ),
+    ]);
     res.json({
       origins: origins.rows.map((r) => r.origin),
       destinations: destinations.rows.map((r) => r.destination),
       airlines: airlines.rows.map((r) => r.airline),
-    })
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// Deals: optional ?origin=, ?include_all=1 — all scheduled flights (for one-per-destination top deals)
-router.get('/deals', async (req, res) => {
+router.get("/deals", async (req, res) => {
   try {
-    const { origin, include_all } = req.query
-    let query = `SELECT * FROM flights 
-       WHERE status = 'scheduled' AND available_seats > 0`
-    const params = []
-    if (include_all !== '1' && include_all !== 'true') {
-      query += ' AND discount > 0'
+    await syncPastFlightsStatus(pool);
+    await ensureDestinationMediaColumns();
+    const { origin, include_all } = req.query;
+    let query = `
+      SELECT
+        f.*,
+        CASE
+          WHEN d.id IS NOT NULL THEN NULLIF(BTRIM(d.image_url), '')
+          ELSE f.image_url
+        END AS image_url,
+        CASE
+          WHEN d.id IS NOT NULL THEN NULLIF(BTRIM(d.tagline), '')
+          ELSE f.tagline
+        END AS tagline,
+        COALESCE(NULLIF(BTRIM(d.city), ''), f.destination) AS destination
+      FROM flights f
+      LEFT JOIN destinations d
+        ON ${normalizedCityExpr("d.city")} = ${normalizedCityExpr("f.destination")}
+      WHERE f.status = 'scheduled' AND f.available_seats > 0`;
+    const params = [];
+    if (include_all !== "1" && include_all !== "true") {
+      query += " AND f.discount > 0";
     }
     if (origin) {
-      params.push(origin)
-      query += ` AND LOWER(origin) = LOWER($${params.length})`
+      params.push(origin);
+      query += ` AND LOWER(TRIM(f.origin)) = LOWER(TRIM($${params.length}::text))`;
     }
-    query += ' ORDER BY departure_time ASC'
-    const result = await pool.query(query, params)
-    res.json(result.rows)
+    query += " ORDER BY f.departure_time ASC";
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// Get single flight by ID
-router.get('/:id', async (req, res) => {
+router.get("/seat-class-normalize", (req, res) => {
+  const raw =
+    req.query.seatClass !== undefined
+      ? req.query.seatClass
+      : req.query.seat_class !== undefined
+        ? req.query.seat_class
+        : "";
+  const normalized = normalizeSeatClass(raw);
+  res.json({
+    seat_class_input: String(raw),
+    normalized_seat_class: normalized,
+  });
+});
+
+router.get("/:flightId/seat-price", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM flights WHERE id = $1', [req.params.id])
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Flight not found.' })
+    const flightId = Number(req.params.flightId);
+    if (!Number.isInteger(flightId) || flightId <= 0) {
+      return res.status(400).json({ error: "Invalid flight id." });
     }
-    res.json(result.rows[0])
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
 
-// Create a new flight (admin only)
-router.post('/', authenticate, authorizeAdmin, async (req, res) => {
+    const seatNumber = String(req.query.seatNumber || "").trim();
+    if (!seatNumber) {
+      return res
+        .status(400)
+        .json({ error: "Query seatNumber is required (e.g. 5B, 12A)." });
+    }
+
+    const seatClass = String(req.query.seatClass || "economy").trim();
+    const hasBaseOverride =
+      req.query.basePrice !== undefined && String(req.query.basePrice) !== "";
+
+    let basePrice;
+    if (hasBaseOverride) {
+      basePrice = Number(req.query.basePrice);
+      if (!Number.isFinite(basePrice) || basePrice < 0) {
+        return res.status(400).json({ error: "Invalid basePrice query." });
+      }
+    } else {
+      const result = await pool.query(
+        "SELECT price FROM flights WHERE id = $1",
+        [flightId],
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Flight not found." });
+      }
+      basePrice = result.rows[0].price;
+    }
+
+    const pricing = getSeatPriceFromBase({
+      basePrice,
+      seatNumber,
+      seatClass,
+    });
+
+    res.json({
+      flight_id: flightId,
+      base_price_used: basePrice,
+      seat_number: seatNumber,
+      seat_class: seatClass,
+      price: pricing.price,
+      breakdown_items: pricing.breakdownItems,
+      breakdown_text: pricing.breakdownText,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    await syncPastFlightsStatus(pool);
+    await ensureDestinationMediaColumns();
+    const result = await pool.query(
+      `SELECT
+        f.*,
+        CASE
+          WHEN d.id IS NOT NULL THEN NULLIF(BTRIM(d.image_url), '')
+          ELSE f.image_url
+        END AS image_url,
+        CASE
+          WHEN d.id IS NOT NULL THEN NULLIF(BTRIM(d.tagline), '')
+          ELSE f.tagline
+        END AS tagline,
+        COALESCE(NULLIF(BTRIM(d.city), ''), f.destination) AS destination
+       FROM flights f
+       LEFT JOIN destinations d
+         ON ${normalizedCityExpr("d.city")} = ${normalizedCityExpr("f.destination")}
+       WHERE f.id = $1`,
+      [req.params.id],
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Flight not found." });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/", authenticate, authorizeAdmin, async (req, res) => {
   try {
     const {
-      flight_number, airline, origin, destination,
-      departure_time, arrival_time, price, original_price,
-      total_seats, image_url, tagline, discount
-    } = req.body
+      flight_number,
+      airline,
+      origin,
+      destination,
+      departure_time,
+      arrival_time,
+      price,
+      original_price,
+      total_seats,
+      image_url,
+      tagline,
+      discount,
+    } = req.body;
 
-    if (!flight_number || !airline || !origin || !destination || !departure_time || !arrival_time || !price) {
-      return res.status(400).json({ error: 'Missing required flight fields.' })
+    if (
+      !flight_number ||
+      !airline ||
+      !origin ||
+      !destination ||
+      !departure_time ||
+      !arrival_time ||
+      !price
+    ) {
+      return res.status(400).json({ error: "Missing required flight fields." });
     }
 
     const result = await pool.query(
       `INSERT INTO flights (flight_number, airline, origin, destination, departure_time, arrival_time, price, original_price, total_seats, available_seats, image_url, tagline, discount)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, $10, $11, $12)
        RETURNING *`,
-      [flight_number, airline, origin, destination, departure_time, arrival_time, price, original_price || price, total_seats || 180, image_url || null, tagline || null, discount || 0]
-    )
+      [
+        flight_number,
+        airline,
+        origin,
+        destination,
+        departure_time,
+        arrival_time,
+        price,
+        original_price || price,
+        total_seats || 180,
+        image_url || null,
+        tagline || null,
+        discount || 0,
+      ],
+    );
 
-    res.status(201).json(result.rows[0])
+    res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// Update a flight (admin only)
-router.put('/:id', authenticate, authorizeAdmin, async (req, res) => {
+router.put("/:id", authenticate, authorizeAdmin, async (req, res) => {
   try {
     const {
-      flight_number, airline, origin, destination,
-      departure_time, arrival_time, price, original_price,
-      total_seats, available_seats, status, image_url, tagline, discount
-    } = req.body
+      flight_number,
+      airline,
+      origin,
+      destination,
+      departure_time,
+      arrival_time,
+      price,
+      original_price,
+      total_seats,
+      available_seats,
+      status,
+      image_url,
+      tagline,
+      discount,
+    } = req.body;
 
     const result = await pool.query(
       `UPDATE flights SET
@@ -145,30 +347,48 @@ router.put('/:id', authenticate, authorizeAdmin, async (req, res) => {
         discount = COALESCE($14, discount)
        WHERE id = $15
        RETURNING *`,
-      [flight_number, airline, origin, destination, departure_time, arrival_time, price, original_price, total_seats, available_seats, status, image_url, tagline, discount, req.params.id]
-    )
+      [
+        flight_number,
+        airline,
+        origin,
+        destination,
+        departure_time,
+        arrival_time,
+        price,
+        original_price,
+        total_seats,
+        available_seats,
+        status,
+        image_url,
+        tagline,
+        discount,
+        req.params.id,
+      ],
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Flight not found.' })
+      return res.status(404).json({ error: "Flight not found." });
     }
 
-    res.json(result.rows[0])
+    res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// Delete a flight (admin only)
-router.delete('/:id', authenticate, authorizeAdmin, async (req, res) => {
+router.delete("/:id", authenticate, authorizeAdmin, async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM flights WHERE id = $1 RETURNING id', [req.params.id])
+    const result = await pool.query(
+      "DELETE FROM flights WHERE id = $1 RETURNING id",
+      [req.params.id],
+    );
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Flight not found.' })
+      return res.status(404).json({ error: "Flight not found." });
     }
-    res.json({ message: 'Flight deleted successfully.' })
+    res.json({ message: "Flight deleted successfully." });
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-module.exports = router
+module.exports = router;

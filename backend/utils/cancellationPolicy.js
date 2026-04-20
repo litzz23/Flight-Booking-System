@@ -1,7 +1,4 @@
-/**
- * Passenger cancellation rules (aligned with typical airline-style measures).
- * Refund amounts are informational (no payment gateway in this app).
- */
+/** Booking cancellation policy used for preview + refund calculation. */
 
 const MIN_HOURS_BEFORE_DEPARTURE = 2
 const TIER_FULL_HOURS = 48
@@ -16,14 +13,6 @@ function roundMoney(n) {
   return Math.round(Number(n) * 100) / 100
 }
 
-/**
- * @param {object} params
- * @param {string} params.departure_time
- * @param {string} params.flight_status - scheduled | delayed | cancelled | completed
- * @param {string|number} params.total_price
- * @param {string} params.booking_status - confirmed | cancelled | completed
- * @returns {{ allowed: boolean, reason?: string, code?: string, refund_amount?: number, fee_amount?: number, policy_label?: string, hours_until_departure?: number }}
- */
 function getCancellationPreview({ departure_time, flight_status, total_price, booking_status }) {
   const total = roundMoney(total_price)
 

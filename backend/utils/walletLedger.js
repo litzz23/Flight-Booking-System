@@ -1,15 +1,9 @@
-/**
- * Wallet ledger helpers — all calls use the same DB client within a transaction.
- */
+/** Wallet balance + transaction helpers for one DB transaction scope. */
 
 function roundMoney(n) {
   return Math.round(Number(n) * 100) / 100
 }
 
-/**
- * @param {import('pg').PoolClient} client
- * @param {{ userId: number, delta: number, type: string, referenceId?: number|null, description?: string|null }} opts
- */
 async function applyWalletChange(client, { userId, delta, type, referenceId, description }) {
   const r = await client.query('SELECT wallet_balance FROM users WHERE id = $1 FOR UPDATE', [userId])
   if (r.rows.length === 0) {

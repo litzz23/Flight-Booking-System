@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
-import { flights as flightsAPI } from "../api";
+import { flights as flightsAPI, predictions as predictionsAPI } from "../api";
 import { SORT_OPTIONS } from "../flightConstants";
 import FlightsHeader from "./flights/FlightsHeader";
 import FlightsFilterBar from "./flights/FlightsFilterBar";
@@ -16,6 +16,10 @@ import {
   buildPriceInsights,
 } from "./flights/FlightSearchRanking";
 import cloudsBg from "../assets/clouds-bg.png";
+import {
+  getFlightDurationMinutes,
+  formatFlightDuration,
+} from "../utils/flightTime";
 import "./FlightDeals.css";
 
 function savingsAmount(d) {
@@ -27,8 +31,7 @@ function savingsAmount(d) {
 function sortFlights(arr, sortBy, getDurationMin) {
   const copy = [...arr];
   copy.sort((a, b) => {
-    if (sortBy === "Cheapest")
-      return Number(a.price) - Number(b.price);
+    if (sortBy === "Cheapest") return Number(a.price) - Number(b.price);
     if (sortBy === "Price: High to Low")
       return Number(b.price) - Number(a.price);
     if (sortBy === "Earliest departure")
@@ -62,6 +65,7 @@ export default function FlightSearchPage() {
     airlines: [],
   });
   const [loading, setLoading] = useState(true);
+  const [riskByFlightId, setRiskByFlightId] = useState({});
 
   const [tripType, setTripType] = useState("One way");
   const [passengerFilter, setPassengerFilter] = useState(1);
@@ -70,9 +74,17 @@ export default function FlightSearchPage() {
   const [airlineFilter, setAirlineFilter] = useState("All");
   const [sortBy, setSortBy] = useState("Best value");
   const [maxPrice, setMaxPrice] = useState(100000);
-  const [maxDuration, setMaxDuration] = useState(180);
+  const [maxDuration, setMaxDuration] = useState(480);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+  const [monthRiskData, setMonthRiskData] = useState(null);
+
+  useEffect(() => {
+    predictionsAPI
+      .getMonthRisk()
+      .then(setMonthRiskData)
+      .catch(() => setMonthRiskData(null));
+  }, []);
 
   useEffect(() => {
     flightsAPI
@@ -101,9 +113,10 @@ export default function FlightSearchPage() {
     return () => document.removeEventListener("click", close);
   }, [activeDropdown]);
 
-  const getDurationMin = useCallback((dep, arr) => {
-    return Math.round((new Date(arr) - new Date(dep)) / 60000);
-  }, []);
+  const getDurationMin = useCallback(
+    (dep, arr) => getFlightDurationMinutes(dep, arr),
+    [],
+  );
 
   const filtered = useMemo(() => {
     return routeFlights.filter((deal) => {
@@ -115,17 +128,51 @@ export default function FlightSearchPage() {
       if (dur > maxDuration) return false;
       return true;
     });
-  }, [routeFlights, passengerFilter, maxPrice, airlineFilter, maxDuration, getDurationMin]);
+  }, [
+    routeFlights,
+    passengerFilter,
+    maxPrice,
+    airlineFilter,
+    maxDuration,
+    getDurationMin,
+  ]);
 
   const listFlights = useMemo(() => {
     let list = filtered;
     if (selectedCalendarDate) {
       list = list.filter(
-        (d) => d.departure_time.slice(0, 10) === selectedCalendarDate
+        (d) => d.departure_time.slice(0, 10) === selectedCalendarDate,
       );
     }
     return sortFlights(list, sortBy, getDurationMin);
   }, [filtered, selectedCalendarDate, sortBy, getDurationMin]);
+
+  useEffect(() => {
+    const ids = listFlights.map((f) => f.id);
+    if (ids.length === 0) {
+      setRiskByFlightId({});
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      ids.map((id) =>
+        predictionsAPI
+          .getCancellationRisk(id)
+          .then((data) => [id, data])
+          .catch(() => [id, null]),
+      ),
+    ).then((pairs) => {
+      if (cancelled) return;
+      const next = {};
+      for (const [id, data] of pairs) {
+        if (data) next[id] = data;
+      }
+      setRiskByFlightId(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [listFlights]);
 
   const dateKeys = useMemo(() => buildLocalDateKeys(21), []);
   const priceByDate = useMemo(() => {
@@ -134,17 +181,17 @@ export default function FlightSearchPage() {
 
   const cheapestDateKey = useMemo(
     () => findCheapestDateKey(priceByDate, dateKeys),
-    [priceByDate, dateKeys]
+    [priceByDate, dateKeys],
   );
 
   const priceInsights = useMemo(
     () => buildPriceInsights(priceByDate, dateKeys),
-    [priceByDate, dateKeys]
+    [priceByDate, dateKeys],
   );
 
   const topDepartingPicks = useMemo(
     () => pickTopDeparting(filtered, getDurationMin, 4),
-    [filtered, getDurationMin]
+    [filtered, getDurationMin],
   );
 
   const formatPrice = (num) => "NPR " + Number(num).toLocaleString();
@@ -159,11 +206,6 @@ export default function FlightSearchPage() {
       day: "numeric",
       month: "short",
     });
-  const formatDuration = (dep, arr) => {
-    const mins = getDurationMin(dep, arr);
-    return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
-  };
-
   const resetFilters = () => {
     setPassengerFilter(1);
     setClassFilter("Economy");
@@ -171,7 +213,7 @@ export default function FlightSearchPage() {
     setAirlineFilter("All");
     setSortBy("Best value");
     setMaxPrice(100000);
-    setMaxDuration(180);
+    setMaxDuration(480);
     setSelectedCalendarDate(null);
   };
 
@@ -180,7 +222,7 @@ export default function FlightSearchPage() {
     classFilter !== "Economy" ||
     airlineFilter !== "All" ||
     maxPrice < 100000 ||
-    maxDuration < 180 ||
+    maxDuration < 480 ||
     sortBy !== "Best value" ||
     stopsFilter !== "Any" ||
     selectedCalendarDate;
@@ -188,7 +230,9 @@ export default function FlightSearchPage() {
   const handleBook = (flight) => {
     if (!user) {
       navigate("/auth", {
-        state: { from: `/flights/search?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}` },
+        state: {
+          from: `/flights/search?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
+        },
       });
       return;
     }
@@ -224,7 +268,7 @@ export default function FlightSearchPage() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
           </svg>
-          Flight deals
+          Flight Deals
         </button>
       </div>
 
@@ -263,7 +307,10 @@ export default function FlightSearchPage() {
         />
 
         {!loading && topDepartingPicks.length > 0 && (
-          <section className="gf-top-departing" aria-label="Top departing flights">
+          <section
+            className="gf-top-departing"
+            aria-label="Top departing flights"
+          >
             <div className="gf-top-departing-head">
               <h2 className="gf-top-departing-title">Top departing flights</h2>
               <p className="gf-top-departing-sub">
@@ -281,28 +328,42 @@ export default function FlightSearchPage() {
                   <span className="gf-top-rank">{idx + 1}</span>
                   <div className="gf-top-main">
                     <span className="gf-top-time">
-                      {new Date(deal.departure_time).toLocaleTimeString("en-GB", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {new Date(deal.departure_time).toLocaleTimeString(
+                        "en-GB",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
                     </span>
                     <span className="gf-top-meta">
-                      {deal.airline} · {formatDuration(deal.departure_time, deal.arrival_time)}
+                      {deal.airline} ·{" "}
+                      {formatFlightDuration(
+                        deal.departure_time,
+                        deal.arrival_time,
+                      )}
                     </span>
                   </div>
-                  <span className="gf-top-price">{formatPrice(deal.price)}</span>
+                  <span className="gf-top-price">
+                    {formatPrice(deal.price)}
+                  </span>
                 </button>
               ))}
             </div>
           </section>
         )}
 
-        <section className="gf-search-panel" aria-label="Price insights and dates">
+        <section
+          className="gf-search-panel"
+          aria-label="Price insights and dates"
+        >
           {priceInsights.length > 0 && (
             <div className="gf-insights">
               <div className="gf-insights-head">
                 <span className="gf-insights-badge">Smart picks</span>
-                <span className="gf-insights-sub">From prices across your date window</span>
+                <span className="gf-insights-sub">
+                  From prices across your date window
+                </span>
               </div>
               <ul className="gf-insights-list">
                 {priceInsights.map((line, i) => (
@@ -330,6 +391,38 @@ export default function FlightSearchPage() {
               Clear date filter
             </button>
           )}
+
+          {monthRiskData?.months?.length > 0 && (
+            <div className="fd-month-risk-panel" aria-label="Seasonal disruption by month">
+              <div className="gf-insights-head fd-month-risk-head">
+                <span className="gf-insights-badge">Disruption by month</span>
+                <span className="gf-insights-sub">
+                  {monthRiskData.timezone_note}
+                </span>
+              </div>
+              <div className="fd-month-risk-scroll">
+                {monthRiskData.months.map((m) => (
+                  <div
+                    key={m.month}
+                    className={`fd-month-risk-cell fd-month-risk-cell--${
+                      m.points === 0 ? "none" : m.points >= 20 ? "high" : "med"
+                    }`}
+                    title={`${m.name}: ${m.description}`}
+                  >
+                    <span className="fd-month-risk-abbr">{m.short_name}</span>
+                    <span className="fd-month-risk-pts">
+                      {m.points > 0 ? `+${m.points}` : "0"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="fd-month-risk-legend">
+                Points shown are added to the disruption score for that departure month
+                (Jun–Aug monsoon +20, Dec–Jan winter +15). Region, demand, and time-of-day
+                add more on each flight.
+              </p>
+            </div>
+          )}
         </section>
 
         <div className="fd-deals-header fd-search-sort-row">
@@ -346,10 +439,7 @@ export default function FlightSearchPage() {
               </span>
             )}
           </div>
-          <div
-            className="fd-sort-wrapper"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="fd-sort-wrapper" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               className="fd-sort-btn"
@@ -415,16 +505,30 @@ export default function FlightSearchPage() {
                     <span className="fd-flight-airline">
                       {deal.airline} · {deal.flight_number}
                     </span>
-                    <span className="fd-flight-route">
-                      {deal.origin} → {deal.destination}
+                    <span className="fd-flight-route-row">
+                      <span className="fd-flight-route">
+                        {deal.origin} → {deal.destination}
+                      </span>
+                      {riskByFlightId[deal.id] && (
+                        <span
+                          className={`fd-flight-risk-badge fd-flight-risk-badge--${riskByFlightId[deal.id].color}`}
+                        >
+                          {riskByFlightId[deal.id].label}
+                        </span>
+                      )}
                     </span>
                     <span className="fd-flight-when">
                       {formatDate(deal.departure_time)} ·{" "}
-                      {formatDuration(deal.departure_time, deal.arrival_time)}
+                      {formatFlightDuration(
+                        deal.departure_time,
+                        deal.arrival_time,
+                      )}
                     </span>
                   </div>
                   <div className="fd-flight-row-price">
-                    <span className="fd-deal-price">{formatPrice(deal.price)}</span>
+                    <span className="fd-deal-price">
+                      {formatPrice(deal.price)}
+                    </span>
                     {savingsAmount(deal) > 0 && (
                       <span className="fd-save-pill">
                         Save {formatPrice(savingsAmount(deal))}

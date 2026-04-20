@@ -2,32 +2,33 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FlightsHeader from "./flights/FlightsHeader";
 import { flights as flightsAPI } from "../api";
+import { getFlightDurationMinutes } from "../utils/flightTime";
 import cloudsBg from "../assets/clouds-bg.png";
 import "./FlightDeals.css";
 
-const GETAWAY_THEMES = [
+const GETAWAY_THEME_TEMPLATES = [
   {
     emoji: "🏔️",
     title: "Mountain Escape",
-    description: "Fly to the Himalayas for trekking & adventure",
+    description: "Perfect for scenic mountain adventures.",
     destination: "Lukla",
   },
   {
     emoji: "🌿",
-    title: "Jungle Safari",
-    description: "Wildlife & nature at Chitwan National Park",
+    title: "Nature Break",
+    description: "Green escapes and relaxed short stays.",
     destination: "Bharatpur",
   },
   {
     emoji: "🪂",
-    title: "Adventure in Pokhara",
-    description: "Paragliding, lakes & Annapurna views",
+    title: "Adventure Pick",
+    description: "Great for active trips and weekend plans.",
     destination: "Pokhara",
   },
   {
     emoji: "🍵",
-    title: "Tea Garden Retreat",
-    description: "Peaceful Ilam hills & eastern Nepal",
+    title: "Culture & Chill",
+    description: "City vibes, local food, and easy travel.",
     destination: "Bhadrapur",
   },
 ];
@@ -99,7 +100,9 @@ function FlightDeals() {
   }, [originCity]);
 
   useEffect(() => {
-    const close = () => setShowOriginPicker(false);
+    const close = () => {
+      setShowOriginPicker(false);
+    };
     if (showOriginPicker) document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, [showOriginPicker]);
@@ -115,6 +118,11 @@ function FlightDeals() {
   const topDealsOnePerDestination = useMemo(() => {
     const filtered = allDeals.filter((deal) => {
       if (deal.available_seats < 1) return false;
+      const durationMin = getFlightDurationMinutes(
+        deal.departure_time,
+        deal.arrival_time,
+      );
+      if (!Number.isFinite(durationMin)) return false;
       return matchesSearch(deal, searchQ);
     });
     const map = new Map();
@@ -132,7 +140,7 @@ function FlightDeals() {
       if (better) map.set(key, f);
     }
     return Array.from(map.values()).sort(
-      (a, b) => Number(a.price) - Number(b.price)
+      (a, b) => Number(a.price) - Number(b.price),
     );
   }, [allDeals, searchQ]);
 
@@ -150,16 +158,21 @@ function FlightDeals() {
     return m;
   }, [allDeals, originCity]);
 
+  const getawayThemes = GETAWAY_THEME_TEMPLATES;
+
   const goToSearch = (destination) => {
     navigate(
-      `/flights/search?origin=${encodeURIComponent(originCity)}&destination=${encodeURIComponent(destination)}`
+      `/flights/search?origin=${encodeURIComponent(originCity)}&destination=${encodeURIComponent(destination)}`,
     );
   };
 
   const originPickList = meta.origins?.length ? meta.origins : ["Kathmandu"];
 
   return (
-    <div className="fd-page fd-page-deals-landing" style={{ backgroundImage: `url(${cloudsBg})` }}>
+    <div
+      className="fd-page fd-page-deals-landing"
+      style={{ backgroundImage: `url(${cloudsBg})` }}
+    >
       <FlightsHeader activeTab="flights" />
 
       <div className="fd-hero fd-hero-deals">
@@ -188,10 +201,7 @@ function FlightDeals() {
         </div>
         <p className="fd-hero-sub">Dream bigger. Pay less.</p>
         <div className="fd-hero-title-row">
-          <h1 className="fd-hero-title">Flight deals</h1>
-          <span className="fd-beta-pill" title="New experience">
-            Beta
-          </span>
+          <h1 className="fd-hero-title">Flight Deals</h1>
         </div>
 
         <div className="fd-search-section fd-search-wrap">
@@ -308,11 +318,15 @@ function FlightDeals() {
                     </div>
                     {deal.discount > 0 && (
                       <span className="fd-deal-discount fd-deal-discount--corner">
-                        <span className="fd-discount-pct">{deal.discount}%</span>{" "}
+                        <span className="fd-discount-pct">
+                          {deal.discount}%
+                        </span>{" "}
                         off
                       </span>
                     )}
-                    {(flightCountByDestination[deal.destination.trim().toLowerCase()] || 0) > 1 && (
+                    {(flightCountByDestination[
+                      deal.destination.trim().toLowerCase()
+                    ] || 0) > 1 && (
                       <span className="fd-deal-multi-count">
                         {
                           flightCountByDestination[
@@ -335,7 +349,7 @@ function FlightDeals() {
             Opens the full flights page for that destination
           </p>
           <div className="fd-getaway-grid">
-            {GETAWAY_THEMES.map((theme) => (
+            {getawayThemes.map((theme) => (
               <button
                 key={theme.title}
                 type="button"
@@ -394,7 +408,7 @@ function FlightDeals() {
         </section>
 
         <footer className="fd-footer">
-          <span>Binayak's Flights</span>
+          <span>Binayak Airlines</span>
           <span className="fd-footer-dot">·</span>
           <span>Nepal Domestic Flights</span>
         </footer>

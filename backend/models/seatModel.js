@@ -8,7 +8,9 @@ async function getSeatsByFlight(client, flightId) {
        s.status,
        s.reserved_until,
        b.user_id AS booked_user_id,
-       t.gender AS booked_gender
+       t.gender AS booked_gender,
+       COALESCE(t.show_gender_on_map, true) AS booked_show_gender_on_map,
+       COALESCE(t.accept_peer_swap, true) AS booked_accept_peer_swap
      FROM seats s
      LEFT JOIN tickets t ON t.seat_id = s.id
      LEFT JOIN bookings b ON b.id = t.booking_id AND b.status = 'confirmed'

@@ -1,15 +1,16 @@
-import { createPortal } from 'react-dom'
-import SeatMapPreview from './SeatMapPreview'
-import './SwapRequestModal.css'
+import { createPortal } from "react-dom";
+import SeatMapPreview from "./SeatMapPreview";
+import "./SwapRequestModal.css";
 
 function genderLabel(g) {
-  if (g === 'female') return 'Female'
-  if (g === 'male') return 'Male'
-  return ''
+  if (g === "female") return "Female";
+  if (g === "male") return "Male";
+  return "";
 }
 
 export default function SwapRequestModal({
   request,
+  booking,
   seats,
   seatsLoading,
   acceptBlockReason,
@@ -21,12 +22,37 @@ export default function SwapRequestModal({
   actionLoadingId,
   pendingAction,
 }) {
-  if (!request) return null
+  if (!request) return null;
 
-  const busy = actionLoadingId === request.id
-  const acceptBusy = busy && pendingAction === 'accept'
-  const declineBusy = busy && pendingAction === 'decline'
-  const acceptDisabled = Boolean(seatsLoading || acceptBlockReason || busy)
+  const toMoneyNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const roundMoney = (value) => Math.round(Number(value) * 100) / 100;
+  const formatMoney = (value) => `NPR ${Number(value).toLocaleString()}`;
+
+  const currentTotal = toMoneyNumber(booking?.total_price);
+  const currentSeat = seats.find(
+    (seat) => Number(seat.id) === Number(request.target_seat),
+  );
+  const offeredSeat = seats.find(
+    (seat) => Number(seat.id) === Number(request.requester_seat),
+  );
+  const currentSeatPrice = toMoneyNumber(currentSeat?.price);
+  const offeredSeatPrice = toMoneyNumber(offeredSeat?.price);
+  const nextTotal =
+    currentTotal == null || currentSeatPrice == null || offeredSeatPrice == null
+      ? null
+      : roundMoney(
+          currentTotal + roundMoney(offeredSeatPrice - currentSeatPrice),
+        );
+  const diff =
+    nextTotal == null || currentTotal == null ? null : nextTotal - currentTotal;
+
+  const busy = actionLoadingId === request.id;
+  const acceptBusy = busy && pendingAction === "accept";
+  const declineBusy = busy && pendingAction === "decline";
+  const acceptDisabled = Boolean(seatsLoading || acceptBlockReason || busy);
 
   const modal = (
     <div
@@ -50,7 +76,12 @@ export default function SwapRequestModal({
               Review the cabin map before you accept or decline.
             </p>
           </div>
-          <button type="button" className="srm-close" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className="srm-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
@@ -64,33 +95,44 @@ export default function SwapRequestModal({
           <p className="srm-meta">
             {request.flight_number} · {request.airline}
           </p>
-          <p className="srm-meta">Departs {new Date(request.departure_time).toLocaleString()}</p>
+          <p className="srm-meta">
+            Departs {new Date(request.departure_time).toLocaleString()}
+          </p>
         </div>
 
         <div className="srm-party">
           <p>
-            <span className="srm-label">From</span>{' '}
+            <span className="srm-label">From</span>{" "}
             <strong>{request.requester_name}</strong>
           </p>
           <ul className="srm-seat-list">
             <li>
-              Their seat (offered to you):{' '}
+              Their seat (offered to you):{" "}
               <strong>{request.requester_seat_number}</strong>
               {request.requester_gender ? (
-                <span className="srm-gender"> · {genderLabel(request.requester_gender)}</span>
+                <span className="srm-gender">
+                  {" "}
+                  · {genderLabel(request.requester_gender)}
+                </span>
               ) : null}
             </li>
             <li>
-              Your seat (they want):{' '}
+              Your seat (they want):{" "}
               <strong>{request.target_seat_number}</strong>
               {request.target_gender ? (
-                <span className="srm-gender"> · {genderLabel(request.target_gender)}</span>
+                <span className="srm-gender">
+                  {" "}
+                  · {genderLabel(request.target_gender)}
+                </span>
               ) : null}
             </li>
           </ul>
         </div>
 
-        <div className="srm-before-after" aria-label="Seating before and after swap">
+        <div
+          className="srm-before-after"
+          aria-label="Seating before and after swap"
+        >
           <div className="srm-ba-col">
             <span className="srm-ba-heading">Now</span>
             <p>
@@ -121,6 +163,45 @@ export default function SwapRequestModal({
         )}
 
         <div className="srm-map-wrap">
+          {currentTotal != null && (
+            <div className="srm-price-preview" aria-live="polite">
+              <span className="srm-price-kicker">Fare preview</span>
+              <div className="srm-price-grid">
+                <p>
+                  <span>Current total</span>
+                  <strong>{formatMoney(currentTotal)}</strong>
+                </p>
+                <p>
+                  <span>After swap</span>
+                  <strong>
+                    {nextTotal == null
+                      ? "Checking seat prices…"
+                      : formatMoney(nextTotal)}
+                  </strong>
+                </p>
+                <p>
+                  <span>Difference</span>
+                  <strong
+                    className={
+                      diff == null
+                        ? ""
+                        : diff > 0
+                          ? "srm-price-up"
+                          : diff < 0
+                            ? "srm-price-down"
+                            : "srm-price-flat"
+                    }
+                  >
+                    {diff == null
+                      ? "-"
+                      : diff === 0
+                        ? "No change"
+                        : `${diff > 0 ? "+" : "-"}${formatMoney(Math.abs(diff))}`}
+                  </strong>
+                </p>
+              </div>
+            </div>
+          )}
           {seatsLoading ? (
             <p className="srm-map-loading">Loading latest seat map…</p>
           ) : (
@@ -147,21 +228,23 @@ export default function SwapRequestModal({
             onClick={() => onDecline(request.id)}
             disabled={busy}
           >
-            {declineBusy ? 'Working…' : 'Decline'}
+            {declineBusy ? "Working…" : "Decline"}
           </button>
           <button
             type="button"
             className="srm-btn srm-btn-accept"
             onClick={() => onAccept(request.id)}
             disabled={acceptDisabled}
-            title={(acceptError || acceptBlockReason) || undefined}
+            title={acceptError || acceptBlockReason || undefined}
           >
-            {acceptBusy ? 'Working…' : 'Accept swap'}
+            {acceptBusy ? "Working…" : "Accept swap"}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 
-  return typeof document !== 'undefined' ? createPortal(modal, document.body) : null
+  return typeof document !== "undefined"
+    ? createPortal(modal, document.body)
+    : null;
 }

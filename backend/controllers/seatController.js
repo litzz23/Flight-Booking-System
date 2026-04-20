@@ -11,7 +11,12 @@ async function getSeatsByFlight(req, res) {
     if (!Number.isInteger(flightId) || flightId <= 0) {
       return res.status(400).json({ error: 'Invalid flightId.' })
     }
-    const seats = await seatService.listSeatsByFlight(flightId)
+    const revealAllGenders = req.user?.role === 'admin'
+    const viewerUserId = !revealAllGenders && req.user?.role === 'user' ? req.user.id : null
+    const seats = await seatService.listSeatsByFlight(flightId, {
+      viewerUserId,
+      revealAllGenders,
+    })
     return res.json(seats)
   } catch (err) {
     return res.status(500).json({ error: err.message })
@@ -40,12 +45,20 @@ async function confirmSeats(req, res) {
     const seatIds = parseSeatIds(req.body.seatIds)
     const passengerNames = Array.isArray(req.body.passengerNames) ? req.body.passengerNames.map((p) => String(p)) : null
     const passengerGenders = Array.isArray(req.body.passengerGenders) ? req.body.passengerGenders.map((g) => String(g)) : null
+    const passengerShowGenderOnMap = Array.isArray(req.body.passengerShowGenderOnMap)
+      ? req.body.passengerShowGenderOnMap
+      : null
+    const passengerAcceptPeerSwap = Array.isArray(req.body.passengerAcceptPeerSwap)
+      ? req.body.passengerAcceptPeerSwap
+      : null
     const tickets = await seatService.confirmSeats({
       userId: req.user.id,
       bookingId,
       seatIds,
       passengerNames,
       passengerGenders,
+      passengerShowGenderOnMap,
+      passengerAcceptPeerSwap,
     })
     return res.json({ tickets })
   } catch (err) {

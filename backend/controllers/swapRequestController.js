@@ -2,7 +2,7 @@ const swapRequestService = require('../services/swapRequestService')
 
 async function createSwapRequest(req, res) {
   try {
-    const { flight_id, requester_seat, target_seat, requester_gender, target_gender } = req.body
+    const { flight_id, requester_seat, target_seat } = req.body
     const flightId = Number(flight_id)
     const requesterSeatId = Number(requester_seat)
     const targetSeatId = Number(target_seat)
@@ -14,8 +14,6 @@ async function createSwapRequest(req, res) {
       flightId,
       requesterSeatId,
       targetSeatId,
-      requesterGender: requester_gender,
-      targetGender: target_gender,
     })
     return res.status(201).json(row)
   } catch (err) {

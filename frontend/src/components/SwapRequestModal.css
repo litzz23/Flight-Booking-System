@@ -82,7 +82,9 @@
   color: #c8c8d8;
   font-size: 1.1rem;
   line-height: 1;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .srm-close:hover {
@@ -205,6 +207,62 @@
   margin-bottom: 16px;
 }
 
+.srm-price-preview {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(138, 180, 248, 0.28);
+  background: linear-gradient(
+    135deg,
+    rgba(61, 90, 241, 0.16),
+    rgba(52, 168, 83, 0.08)
+  );
+}
+
+.srm-price-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8ab4f8;
+}
+
+.srm-price-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.srm-price-grid p {
+  margin: 0;
+}
+
+.srm-price-grid span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+  color: #a8a8be;
+}
+
+.srm-price-grid strong {
+  color: #ececf5;
+  font-size: 0.9rem;
+}
+
+.srm-price-up {
+  color: #f5b66c !important;
+}
+
+.srm-price-down {
+  color: #81c995 !important;
+}
+
+.srm-price-flat {
+  color: #b8b8c8 !important;
+}
+
 .srm-map-loading {
   margin: 24px 0;
   text-align: center;
@@ -228,7 +286,10 @@
   font-weight: 600;
   font-family: inherit;
   border: 1px solid transparent;
-  transition: background 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.12s ease;
 }
 
 .srm-btn:disabled {
@@ -279,6 +340,11 @@
 
   .srm-actions {
     flex-direction: column;
+  }
+
+  .srm-price-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .srm-btn-secondary {

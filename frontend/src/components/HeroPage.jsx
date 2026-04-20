@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import airplaneWindow from "../assets/airplane-window.png";
 import "./HeroPage.css";
 
@@ -10,13 +10,10 @@ function HeroPage() {
       className="hero-wrapper"
       style={{ backgroundImage: `url(${airplaneWindow})` }}
     >
-      {/* Navbar */}
       <nav className="navbar">
         <div className="nav-left">
-          <a href="#">About</a>
-          <a href="#">Our Fleet</a>
-          <a href="#">Advantages</a>
-          <a href="#">Global</a>
+          <Link to="/about">About</Link>
+          <Link to="/reviews">Reviews</Link>
         </div>
         <div className="nav-right">
           <a href="tel:+977984123456">+977 984 123 456</a>
@@ -24,47 +21,44 @@ function HeroPage() {
         </div>
       </nav>
 
-      {/* Brand name — centered in the window */}
       <span className="hero-brand-overlay">Binayak Jets</span>
 
-      {/* Hero Content — three columns */}
       <main className="hero-main">
-        {/* Left */}
         <div className="hero-left">
           <h1 className="hero-movement">
-            We are
+            From Peaks
             <br />
-            movement
+            To Planes
           </h1>
           <div className="hero-tagline">
             <p className="hero-tagline-title">
-              Your
+              From
               <br />
-              freedom to
+              mountains to
               <br />
-              enjoy life
+              city lights
             </p>
             <p className="hero-tagline-body">
-              Every flight is designed around your comfort,
+              Fly across Nepal with comfort and confidence,
               <br />
-              time, and ambitions — so you can focus on
+              with routes, fares, and schedules designed
               <br />
-              what truly matters, while we take care of
+              for travelers in Nepal and everyone exploring
               <br />
-              everything else.
+              this beautiful country.
             </p>
           </div>
         </div>
 
-        {/* Center — empty, keeps grid balanced */}
         <div className="hero-center" aria-hidden="true" />
 
-        {/* Right */}
         <div className="hero-right">
           <h2 className="hero-distinction">
-            We are
+            Conquer
             <br />
-            distinction
+            Nepal's
+            <br />
+            Skies
           </h2>
           <div className="hero-scroll-hint">
             <div className="scroll-line">
@@ -78,14 +72,13 @@ function HeroPage() {
               >
                 <path d="M12 5v14M5 12l7 7 7-7" />
               </svg>
-              <span>SCROLL DOWN</span>
+              <span>BOOK FLIGHTS NOW</span>
             </div>
             <span className="scroll-separator">TO START THE JOURNEY</span>
           </div>
         </div>
       </main>
 
-      {/* Book the Flight — bottom center */}
       <div className="hero-book-cta">
         <button className="btn-book" onClick={() => navigate("/flights")}>
           Book the Flight

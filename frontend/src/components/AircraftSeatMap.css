@@ -18,14 +18,33 @@
   margin-right: 6px;
 }
 
-.ac-dot-available { background: #34a853; }
-.ac-dot-booked { background: #ea4335; }
-.ac-dot-male { background: #1a56c4; }
-.ac-dot-female { background: #c2187a; }
-.ac-dot-selected { background: #fbbc04; }
-.ac-dot-mine { background: #8ab4f8; }
-.ac-dot-swap-requester { background: #fbbc04; }
-.ac-dot-swap-target { background: #34a853; }
+.ac-dot-available {
+  background: #34a853;
+}
+.ac-dot-booked {
+  background: #ea4335;
+}
+.ac-dot-male {
+  background: #1a56c4;
+}
+.ac-dot-female {
+  background: #c2187a;
+}
+.ac-dot-selected {
+  background: #fbbc04;
+}
+.ac-dot-mine {
+  background: #8ab4f8;
+}
+.ac-dot-no-swap {
+  background: #888;
+}
+.ac-dot-swap-requester {
+  background: #fbbc04;
+}
+.ac-dot-swap-target {
+  background: #34a853;
+}
 
 .ac-cabin-shell {
   max-width: 760px;
@@ -33,7 +52,11 @@
   padding: 12px 10px 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 140px 140px 18px 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.02)
+  );
 }
 
 .ac-cockpit-label {
@@ -104,6 +127,7 @@
 }
 
 .ac-seat {
+  position: relative;
   min-width: 48px;
   min-height: 34px;
   padding: 4px 8px;
@@ -111,7 +135,10 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 11px;
   font-weight: 600;
-  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    filter 0.14s ease;
 }
 
 .ac-seat:hover:not(:disabled) {
@@ -120,17 +147,91 @@
   filter: brightness(1.03);
 }
 
+.ac-seat-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  min-width: 170px;
+  max-width: 230px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(8, 14, 30, 0.95);
+  color: #e8ecff;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+  text-align: left;
+  line-height: 1.2;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 40;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.ac-seat-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(8, 14, 30, 0.95) transparent transparent transparent;
+}
+
+.ac-seat:hover .ac-seat-tooltip,
+.ac-seat:focus-visible .ac-seat-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ac-seat-tooltip-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.ac-seat-tooltip-meta {
+  display: block;
+  font-size: 10px;
+  color: #c3cee9;
+  margin-bottom: 5px;
+}
+
+.ac-seat-tooltip-price {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ee7b3;
+  margin-bottom: 4px;
+}
+
+.ac-seat-tooltip-breakdown {
+  display: block;
+  font-size: 10px;
+  color: #b6c2df;
+}
+
 .ac-seat-preview {
 }
 
 .ac-seat-highlight-requester {
-  box-shadow: 0 0 0 3px #fbbc04, 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 0 3px #fbbc04,
+    0 4px 14px rgba(0, 0, 0, 0.35);
   position: relative;
   z-index: 2;
 }
 
 .ac-seat-highlight-target {
-  box-shadow: 0 0 0 3px #34a853, 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 0 3px #34a853,
+    0 4px 14px rgba(0, 0, 0, 0.35);
   position: relative;
   z-index: 2;
 }
@@ -144,7 +245,10 @@
   gap: 1px;
 }
 
-.ac-seat-num { font-size: inherit; font-weight: 600; }
+.ac-seat-num {
+  font-size: inherit;
+  font-weight: 600;
+}
 
 .ac-seat-gender {
   font-size: 9px;
@@ -153,12 +257,36 @@
   letter-spacing: 0.02em;
 }
 
-.ac-seat-available { background: #34a853; color: #fff; }
-.ac-seat-booked { background: #ea4335; color: #fff;  }
-.ac-seat-booked-male { background: #1a56c4; color: #fff;  }
-.ac-seat-booked-female { background: #b8076a; color: #fff;  }
-.ac-seat-reserved { background: #d98400; color: #fff;  }
-.ac-seat-selected { background: #fbbc04; color: #1e1e1e; }
+.ac-seat-available {
+  background: #34a853;
+  color: #fff;
+}
+.ac-seat-booked {
+  background: #ea4335;
+  color: #fff;
+}
+.ac-seat-booked-male {
+  background: #1a56c4;
+  color: #fff;
+}
+.ac-seat-booked-female {
+  background: #b8076a;
+  color: #fff;
+}
+
+.ac-seat-peer-swap-off {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
+.ac-seat-reserved {
+  background: #d98400;
+  color: #fff;
+}
+.ac-seat-selected {
+  background: #fbbc04;
+  color: #1e1e1e;
+}
 .ac-seat-mine {
   background: rgba(138, 180, 248, 0.35);
   color: #e8ecff;
@@ -166,24 +294,47 @@
 }
 
 .ac-seat-mine-male {
-  background: linear-gradient(145deg, rgba(26, 86, 196, 0.5), rgba(138, 180, 248, 0.32));
+  background: linear-gradient(
+    145deg,
+    rgba(26, 86, 196, 0.5),
+    rgba(138, 180, 248, 0.32)
+  );
   border-color: rgba(90, 140, 230, 0.65);
 }
 
 .ac-seat-mine-female {
-  background: linear-gradient(145deg, rgba(184, 7, 106, 0.45), rgba(138, 180, 248, 0.28));
+  background: linear-gradient(
+    145deg,
+    rgba(184, 7, 106, 0.45),
+    rgba(138, 180, 248, 0.28)
+  );
   border-color: rgba(210, 90, 150, 0.55);
 }
-.ac-seat-empty { background: transparent; border-color: transparent;  }
+.ac-seat-empty {
+  background: transparent;
+  border-color: transparent;
+}
 
 @media (max-width: 640px) {
-  .ac-cabin-shell { border-radius: 80px 80px 14px 14px; }
-  .ac-columns { gap: 22px; }
-  .ac-side { gap: 6px; }
+  .ac-cabin-shell {
+    border-radius: 80px 80px 14px 14px;
+  }
+  .ac-columns {
+    gap: 22px;
+  }
+  .ac-side {
+    gap: 6px;
+  }
   .ac-seat {
     min-width: 38px;
     min-height: 30px;
     font-size: 10px;
     padding: 3px 4px;
+  }
+
+  .ac-seat-tooltip {
+    min-width: 156px;
+    max-width: 190px;
+    padding: 7px 8px;
   }
 }

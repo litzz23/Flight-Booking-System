@@ -8,12 +8,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   position: relative;
 }
 
 .auth-page::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   background: rgba(20, 20, 35, 0.7);
@@ -86,7 +86,7 @@
   padding: 13px 16px;
   color: #e0e0ec;
   font-size: 14px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -99,6 +99,45 @@
   border-color: rgba(138, 180, 248, 0.5);
 }
 
+.auth-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.auth-inline-link {
+  background: none;
+  border: none;
+  color: #8ab4f8;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "Inter", sans-serif;
+}
+
+.auth-inline-link:hover {
+  text-decoration: underline;
+}
+
+.auth-phone-field {
+  position: relative;
+}
+
+.auth-phone-prefix {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(224, 224, 236, 0.7);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.auth-phone-field input {
+  width: 100%;
+  padding-left: 66px;
+}
+
 .auth-submit {
   margin-top: 8px;
   background: #5b72e0;
@@ -108,8 +147,10 @@
   padding: 14px;
   font-size: 15px;
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
-  transition: background 0.2s, transform 0.15s;
+  font-family: "Inter", sans-serif;
+  transition:
+    background 0.2s,
+    transform 0.15s;
 }
 
 .auth-submit:hover:not(:disabled) {
@@ -121,6 +162,17 @@
   opacity: 0.6;
 }
 
+.auth-submit-secondary {
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d6d8e5;
+}
+
+.auth-submit-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+}
+
 .auth-switch {
   text-align: center;
   margin-top: 22px;
@@ -128,16 +180,16 @@
   color: #70708a;
 }
 
-.auth-switch button {
+.auth-switch-link {
   background: none;
   border: none;
   color: #8ab4f8;
   font-size: 13px;
   font-weight: 600;
   margin-left: 6px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
-.auth-switch button:hover {
+.auth-switch-link:hover {
   text-decoration: underline;
 }

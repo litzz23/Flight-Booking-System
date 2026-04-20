@@ -5,17 +5,19 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "nodemon --delay 0.5 server.js",
     "db:init": "node db/init.js",
     "db:reseed-flights": "node db/reseed_flights.js",
     "db:generate-flights-seed": "node db/generate_flights_seed.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.18.0",
     "pg": "^8.13.1"
   },
   "devDependencies": {
